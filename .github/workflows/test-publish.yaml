@@ -149,4 +149,4 @@ jobs:
           central-token: ${{ secrets.CENTRAL_TOKEN }}
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY_B64 }}
           publishing-type: ${{ inputs.publishing-type || 'USER_MANAGED' }}
-          dry-run: ${{ inputs.dry-run || 'true' }}
+          dry-run: ${{ inputs.dry-run }}
