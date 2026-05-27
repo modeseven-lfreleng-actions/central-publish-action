@@ -1,0 +1,17 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2025 The Linux Foundation
+
+extends: default
+
+rules:
+  line-length:
+    max: 120
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+  comments:
+    require-starting-space: true
+    min-spaces-from-content: 1
+  truthy:
+    allowed-values: ['true', 'false']
+    check-keys: false

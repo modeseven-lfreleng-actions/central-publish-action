@@ -1,5 +1,7 @@
-# SPDX-License-Identifier: Apache-2.0
-# SPDX-FileCopyrightText: 2026 The Linux Foundation
+<!--
+SPDX-License-Identifier: Apache-2.0
+SPDX-FileCopyrightText: 2026 The Linux Foundation
+-->
 
 # Central Publish Action
 
@@ -54,31 +56,32 @@ Publish Maven artifacts to Maven Central via the [Central Portal REST API](https
 
 ## Inputs
 
-| Input | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `m2repo-path` | yes | `m2repo` | Path to local Maven repo directory |
-| `central-username` | yes | — | Central Portal token username |
-| `central-token` | yes | — | Central Portal token password |
-| `gpg-private-key` | yes | — | GPG private key (base64-encoded armor) |
-| `gpg-passphrase` | no | _(empty)_ | GPG key passphrase |
-| `publishing-type` | no | `USER_MANAGED` | `AUTOMATIC` or `USER_MANAGED` |
-| `dry-run` | no | `false` | Skip upload, create bundle only |
-| `poll-timeout` | no | `600` | Max seconds to wait for validation |
-| `poll-interval` | no | `15` | Seconds between status polls |
+| Input              | Required | Default        | Description                           |
+|--------------------|----------|----------------|---------------------------------------|
+| `m2repo-path`      | yes      | `m2repo`       | Path to local Maven repo directory    |
+| `central-username` | yes      | —              | Central Portal token username         |
+| `central-token`    | yes      | —              | Central Portal token password         |
+| `gpg-private-key`  | yes      | —              | GPG private key (base64-encoded armor)|
+| `gpg-passphrase`   | no       | _(empty)_      | GPG key passphrase                    |
+| `publishing-type`  | no       | `USER_MANAGED` | `AUTOMATIC` or `USER_MANAGED`         |
+| `dry-run`          | no       | `false`        | Skip upload, create bundle only       |
+| `poll-timeout`     | no       | `600`          | Max seconds to wait for validation    |
+| `poll-interval`    | no       | `15`           | Seconds between status polls          |
 
 ## Outputs
 
-| Output | Description |
-|--------|-------------|
-| `deployment-id` | Central Portal deployment ID |
-| `deployment-status` | Final status: `VALIDATED`, `PUBLISHED`, or `FAILED` |
-| `bundle-path` | Path to the created bundle ZIP |
+| Output              | Description                                              |
+|---------------------|----------------------------------------------------------|
+| `deployment-id`     | Central Portal deployment ID                             |
+| `deployment-status` | Final status: `VALIDATED`, `PUBLISHED`, or `FAILED`      |
+| `bundle-path`       | Path to the created bundle ZIP                           |
 
 ## Requirements
 
 ### Maven Central POM Compliance
 
 Your POM must include:
+
 - `<name>` — project name
 - `<description>` — project description
 - `<url>` — project URL
@@ -89,6 +92,7 @@ Your POM must include:
 ### Artifacts Required
 
 For each module:
+
 - `*.jar` — compiled artifact
 - `*.pom` — POM file
 - `*-sources.jar` — source code
@@ -98,7 +102,7 @@ The action generates `.asc` (GPG signature) for each file automatically.
 
 ## How It Works
 
-```
+```text
 1. Import GPG key from base64 secret
 2. Sign all .jar/.pom/.module files → .asc signatures
 3. Create bundle.zip (Maven directory structure, excludes checksums)
@@ -109,6 +113,7 @@ The action generates `.asc` (GPG signature) for each file automatically.
 ## Testing
 
 Use `publishing-type: USER_MANAGED` for safe testing:
+
 - Artifacts are uploaded and validated
 - NOT published to Maven Central
 - Can be deleted from Portal UI
