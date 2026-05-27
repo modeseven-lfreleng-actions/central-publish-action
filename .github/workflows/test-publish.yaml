@@ -1,0 +1,152 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 The Linux Foundation
+---
+name: "Test: Central Publish (USER_MANAGED)"
+
+# yamllint disable-line rule:truthy
+on:
+  workflow_dispatch:
+    inputs:
+      publishing-type:
+        description: "Publishing type"
+        type: choice
+        options:
+          - USER_MANAGED
+          - AUTOMATIC
+        default: USER_MANAGED
+      dry-run:
+        description: "Dry run (skip upload)"
+        type: boolean
+        default: true
+      debug:
+        description: "Enable debug logging"
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - "action.yaml"
+      - "scripts/**"
+      - ".github/workflows/test-publish.yaml"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout action
+        # yamllint disable-line rule:line-length
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Java
+        # yamllint disable-line rule:line-length
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Create test Maven project
+        run: |
+          set -euo pipefail
+
+          # Create a minimal Maven project with required Central metadata
+          mkdir -p test-project/src/main/java/io/github/askb/testcentral
+          mkdir -p test-project/src/main/javadoc
+
+          cat > test-project/pom.xml << 'POMEOF'
+          <project xmlns="http://maven.apache.org/POM/4.0.0"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                   http://maven.apache.org/xsd/maven-4.0.0.xsd">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>io.github.askb</groupId>
+            <artifactId>test-central-publish</artifactId>
+            <version>0.0.1-test</version>
+            <packaging>jar</packaging>
+
+            <name>Test Central Publish</name>
+            <description>Test artifact for central-publish-action CI</description>
+            <url>https://github.com/askb/central-publish-action</url>
+
+            <licenses>
+              <license>
+                <name>Apache-2.0</name>
+                <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+              </license>
+            </licenses>
+
+            <developers>
+              <developer>
+                <name>Anil Belur</name>
+                <email>askb23@gmail.com</email>
+              </developer>
+            </developers>
+
+            <scm>
+              <connection>scm:git:git://github.com/askb/central-publish-action.git</connection>
+              <developerConnection>scm:git:ssh://github.com:askb/central-publish-action.git</developerConnection>
+              <url>https://github.com/askb/central-publish-action</url>
+            </scm>
+
+            <build>
+              <plugins>
+                <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-source-plugin</artifactId>
+                  <version>3.3.1</version>
+                  <executions>
+                    <execution>
+                      <id>attach-sources</id>
+                      <goals><goal>jar-no-fork</goal></goals>
+                    </execution>
+                  </executions>
+                </plugin>
+                <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-javadoc-plugin</artifactId>
+                  <version>3.11.2</version>
+                  <executions>
+                    <execution>
+                      <id>attach-javadocs</id>
+                      <goals><goal>jar</goal></goals>
+                    </execution>
+                  </executions>
+                </plugin>
+              </plugins>
+            </build>
+          </project>
+          POMEOF
+
+          # Create a minimal Java source file
+          cat > test-project/src/main/java/io/github/askb/testcentral/Hello.java << 'JAVAEOF'
+          package io.github.askb.testcentral;
+
+          /** Test class for Maven Central publication testing. */
+          public class Hello {
+              /** Returns greeting. */
+              public static String greet() {
+                  return "Hello from central-publish-action test!";
+              }
+          }
+          JAVAEOF
+
+      - name: Build and deploy to local repo
+        run: |
+          set -euo pipefail
+          cd test-project
+          mvn clean deploy \
+            -DaltDeploymentRepository="local::default::file://${GITHUB_WORKSPACE}/m2repo" \
+            -B -q
+
+          echo "=== Deployed artifacts ==="
+          find "${GITHUB_WORKSPACE}/m2repo" -type f | sort
+
+      - name: Run central-publish-action
+        uses: ./
+        with:
+          m2repo-path: m2repo
+          central-username: ${{ secrets.CENTRAL_USERNAME }}
+          central-token: ${{ secrets.CENTRAL_TOKEN }}
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY_B64 }}
+          publishing-type: ${{ inputs.publishing-type || 'USER_MANAGED' }}
+          dry-run: ${{ inputs.dry-run || 'true' }}
