@@ -220,17 +220,24 @@ runs:
         FINAL_STATUS="UNKNOWN"
 
         while [ "$ELAPSED" -lt "$TIMEOUT" ]; do
-          RESPONSE=$(curl -sf \
+          RESPONSE=$(curl -s -X POST \
             "https://central.sonatype.com/api/v1/publisher/status?id=${DEPLOYMENT_ID}" \
             -H "Authorization: Bearer $AUTH_TOKEN" \
-            2>&1) || {
-              echo "  Poll request failed, retrying..."
-              sleep "$INTERVAL"
-              ELAPSED=$((ELAPSED + INTERVAL))
-              continue
-            }
+            -H "Content-Type: application/json" \
+            -w "\n%{http_code}" \
+            2>&1)
 
-          STATUS=$(echo "$RESPONSE" | jq -r '.deploymentState // .state // "UNKNOWN"')
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "  Poll request failed (HTTP $HTTP_CODE), retrying..."
+            sleep "$INTERVAL"
+            ELAPSED=$((ELAPSED + INTERVAL))
+            continue
+          fi
+
+          STATUS=$(echo "$BODY" | jq -r '.deploymentState // .state // "UNKNOWN"')
           echo "  [$ELAPSED s] Status: $STATUS"
 
           case "$STATUS" in
@@ -250,7 +257,7 @@ runs:
             FAILED)
               FINAL_STATUS="FAILED"
               echo "::error::Deployment FAILED"
-              echo "$RESPONSE" | jq '.errors // .' 2>/dev/null || echo "$RESPONSE"
+              echo "$BODY" | jq '.errors // .' 2>/dev/null || echo "$BODY"
               exit 1
               ;;
             PENDING|VALIDATING|PUBLISHING)
