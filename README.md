@@ -5,20 +5,25 @@ SPDX-FileCopyrightText: 2026 The Linux Foundation
 
 # Central Publish Action
 
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable-next-line MD013 -->
+[![Linux Foundation](https://img.shields.io/badge/Linux-Foundation-blue)](https://linuxfoundation.org/) [![Source Code](https://img.shields.io/badge/GitHub-100000?logo=github&logoColor=white&color=blue)](https://github.com/askb/central-publish-action) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![pre-commit.ci status badge]][pre-commit.ci results page] [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/askb/central-publish-action/badge)](https://scorecard.dev/viewer/?uri=github.com/askb/central-publish-action)
+<!-- prettier-ignore-end -->
+
 Publish Maven artifacts to Maven Central via the [Central Portal REST API](https://central.sonatype.com/publishing).
 
 ## Features
 
 - GPG signs all artifacts (`.jar`, `.pom`, `.module`)
 - Creates compliant bundle ZIP for Central Portal upload
-- Supports `AUTOMATIC` (auto-publish) and `USER_MANAGED` (validate-only) modes
+- Supports `AUTOMATIC` (auto-publish) and `USER_MANAGED` (validation) modes
 - Polls deployment status until completion
 - `dry-run` mode for local testing (creates bundle, skips upload)
 - Generates `$GITHUB_STEP_SUMMARY` with results
 
 ## Usage
 
-### Basic (validate only — safe for testing)
+### Basic (validation — safe for testing)
 
 ```yaml
 - uses: askb/central-publish-action@main
@@ -64,7 +69,7 @@ Publish Maven artifacts to Maven Central via the [Central Portal REST API](https
 | `gpg-private-key`  | yes      | —              | GPG private key (base64-encoded armor)|
 | `gpg-passphrase`   | no       | _(empty)_      | GPG key passphrase                    |
 | `publishing-type`  | no       | `USER_MANAGED` | `AUTOMATIC` or `USER_MANAGED`         |
-| `dry-run`          | no       | `false`        | Skip upload, create bundle only       |
+| `dry-run`          | no       | `false`        | Skip upload, create bundle file       |
 | `poll-timeout`     | no       | `600`          | Max seconds to wait for validation    |
 | `poll-interval`    | no       | `15`           | Seconds between status polls          |
 
@@ -72,9 +77,9 @@ Publish Maven artifacts to Maven Central via the [Central Portal REST API](https
 
 | Output              | Description                                              |
 |---------------------|----------------------------------------------------------|
-| `deployment-id`     | Central Portal deployment ID                             |
-| `deployment-status` | Final status: `VALIDATED`, `PUBLISHED`, or `FAILED`      |
-| `bundle-path`       | Path to the created bundle ZIP                           |
+| `deployment_id`     | Central Portal deployment ID                             |
+| `deployment_status` | Final status: `VALIDATED`, `PUBLISHED`, or `FAILED`      |
+| `bundle_path`       | Path to the created bundle ZIP                           |
 
 ## Requirements
 
@@ -114,11 +119,14 @@ The action generates `.asc` (GPG signature) for each file automatically.
 
 Use `publishing-type: USER_MANAGED` for safe testing:
 
-- Artifacts are uploaded and validated
+- The action uploads and validates artifacts
 - NOT published to Maven Central
-- Can be deleted from Portal UI
+- Maintainers can delete it from the Portal UI
 - Perfect for CI testing
 
 ## License
 
 Apache-2.0
+
+[pre-commit.ci results page]: https://results.pre-commit.ci/latest/github/askb/central-publish-action/master
+[pre-commit.ci status badge]: https://results.pre-commit.ci/badge/github/askb/central-publish-action/master.svg

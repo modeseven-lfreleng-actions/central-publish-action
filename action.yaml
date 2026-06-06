@@ -6,7 +6,6 @@ description: >-
   Publish Maven artifacts to Maven Central via the Central Portal REST API.
   Signs artifacts with GPG, creates a bundle ZIP, uploads to Central Portal,
   and polls for deployment status.
-author: "Anil Belur <askb23@gmail.com>"
 
 inputs:
   m2repo-path:
@@ -44,15 +43,15 @@ inputs:
     default: "15"
 
 outputs:
-  deployment-id:
+  deployment_id:
     description: "Central Portal deployment ID"
-    value: ${{ steps.upload.outputs.deployment-id }}
-  deployment-status:
+    value: ${{ steps.upload.outputs.deployment_id }}
+  deployment_status:
     description: "Final deployment status"
-    value: ${{ steps.poll.outputs.deployment-status }}
-  bundle-path:
+    value: ${{ steps.poll.outputs.deployment_status }}
+  bundle_path:
     description: "Path to created bundle ZIP"
-    value: ${{ steps.bundle.outputs.bundle-path }}
+    value: ${{ steps.bundle.outputs.bundle_path }}
 
 runs:
   using: "composite"
@@ -170,7 +169,7 @@ runs:
 
         BUNDLE_SIZE=$(stat -c%s "$BUNDLE_PATH" 2>/dev/null || stat -f%z "$BUNDLE_PATH")
         echo "Bundle created: $BUNDLE_PATH ($(numfmt --to=iec "$BUNDLE_SIZE"))"
-        echo "bundle-path=$BUNDLE_PATH" >> "$GITHUB_OUTPUT"
+        echo "bundle_path=$BUNDLE_PATH" >> "$GITHUB_OUTPUT"
         echo "bundle-size=$BUNDLE_SIZE" >> "$GITHUB_OUTPUT"
 
     - name: Upload bundle to Central Portal
@@ -184,7 +183,7 @@ runs:
         # SPDX-License-Identifier: Apache-2.0
         set -euo pipefail
 
-        BUNDLE_PATH="${{ steps.bundle.outputs.bundle-path }}"
+        BUNDLE_PATH="${{ steps.bundle.outputs.bundle_path }}"
         PUBLISHING_TYPE="${{ inputs.publishing-type }}"
 
         # Generate Bearer token: base64(username:password)
@@ -205,7 +204,7 @@ runs:
         # Response is just the deployment ID (plain text)
         DEPLOYMENT_ID="$RESPONSE"
         echo "Deployment ID: $DEPLOYMENT_ID"
-        echo "deployment-id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
+        echo "deployment_id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
 
     - name: Poll deployment status
       id: poll
@@ -218,7 +217,7 @@ runs:
         # SPDX-License-Identifier: Apache-2.0
         set -euo pipefail
 
-        DEPLOYMENT_ID="${{ steps.upload.outputs.deployment-id }}"
+        DEPLOYMENT_ID="${{ steps.upload.outputs.deployment_id }}"
         TIMEOUT="${{ inputs.poll-timeout }}"
         INTERVAL="${{ inputs.poll-interval }}"
 
@@ -289,7 +288,7 @@ runs:
           exit 1
         fi
 
-        echo "deployment-status=$FINAL_STATUS" >> "$GITHUB_OUTPUT"
+        echo "deployment_status=$FINAL_STATUS" >> "$GITHUB_OUTPUT"
 
     - name: Generate summary
       if: always()
@@ -308,6 +307,6 @@ runs:
         | **Bundle Size** | $(numfmt --to=iec ${{ steps.bundle.outputs.bundle-size }} 2>/dev/null || echo "N/A") |
         | **Publishing Type** | ${{ inputs.publishing-type }} |
         | **Dry Run** | ${{ inputs.dry-run }} |
-        | **Deployment ID** | ${{ steps.upload.outputs.deployment-id || 'N/A (dry-run)' }} |
-        | **Status** | ${{ steps.poll.outputs.deployment-status || 'N/A' }} |
+        | **Deployment ID** | ${{ steps.upload.outputs.deployment_id || 'N/A (dry-run)' }} |
+        | **Status** | ${{ steps.poll.outputs.deployment_status || 'N/A' }} |
         EOF
