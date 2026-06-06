@@ -74,7 +74,7 @@ jobs:
 
             <name>Test Central Publish</name>
             <description>Test artifact for central-publish-action CI</description>
-            <url>https://github.com/askb/central-publish-action</url>
+            <url>https://github.com/lfreleng-actions/central-publish-action</url>
 
             <licenses>
               <license>
@@ -91,9 +91,9 @@ jobs:
             </developers>
 
             <scm>
-              <connection>scm:git:git://github.com/askb/central-publish-action.git</connection>
-              <developerConnection>scm:git:ssh://github.com:askb/central-publish-action.git</developerConnection>
-              <url>https://github.com/askb/central-publish-action</url>
+              <connection>scm:git:git://github.com/lfreleng-actions/central-publish-action.git</connection>
+              <developerConnection>scm:git:ssh://github.com:lfreleng-actions/central-publish-action.git</developerConnection>
+              <url>https://github.com/lfreleng-actions/central-publish-action</url>
             </scm>
 
             <build>
