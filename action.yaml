@@ -4,8 +4,9 @@
 name: "Central Publish Action"
 description: >-
   Publish Maven artifacts to Maven Central via the Central Portal REST API.
-  Signs artifacts with GPG, creates a bundle ZIP, uploads to Central Portal,
-  and polls for deployment status.
+  Optionally signs artifacts with GPG (signing-method=gpg) or accepts artifacts
+  pre-signed via sigul (signing-method=sigul), creates a bundle ZIP, uploads to
+  Central Portal, and polls for deployment status.
 
 inputs:
   m2repo-path:
@@ -18,9 +19,20 @@ inputs:
   central-token:
     description: "Central Portal token password"
     required: true
+  signing-method:
+    description: >-
+      How artifacts are signed: 'gpg' (this action imports gpg-private-key and
+      signs), 'sigul' (artifacts MUST be pre-signed by the caller, e.g. via
+      lfit/sigul-sign-action, before this action runs — it only verifies the
+      .asc files exist), or 'none' (no signing; for dry-run / non-Central use).
+    required: false
+    default: "gpg"
   gpg-private-key:
-    description: "GPG private key (base64 encoded, armor format)"
-    required: true
+    description: >-
+      GPG private key (base64 encoded, armor format). Required only when
+      signing-method is 'gpg'.
+    required: false
+    default: ""
   gpg-passphrase:
     description: "GPG key passphrase (empty if no passphrase)"
     required: false
@@ -64,6 +76,21 @@ runs:
         set -euo pipefail
 
         M2REPO="${{ inputs.m2repo-path }}"
+        SIGNING_METHOD="${{ inputs.signing-method }}"
+
+        case "$SIGNING_METHOD" in
+          gpg|sigul|none) ;;
+          *)
+            echo "::error::Invalid signing-method '$SIGNING_METHOD' (expected: gpg, sigul, or none)"
+            exit 1
+            ;;
+        esac
+
+        if [ "$SIGNING_METHOD" = "gpg" ] && [ -z "${{ inputs.gpg-private-key }}" ]; then
+          echo "::error::signing-method is 'gpg' but gpg-private-key is empty"
+          exit 1
+        fi
+
         if [ ! -d "$M2REPO" ]; then
           echo "::error::m2repo-path '$M2REPO' does not exist or is not a directory"
           exit 1
@@ -75,11 +102,13 @@ runs:
           exit 1
         fi
 
+        echo "Signing method: $SIGNING_METHOD"
         echo "Found $ARTIFACT_COUNT POM(s) in $M2REPO"
         echo "artifact-count=$ARTIFACT_COUNT" >> "$GITHUB_OUTPUT"
 
     - name: Import GPG key
       id: gpg
+      if: inputs.signing-method == 'gpg'
       shell: bash
       run: |
         # SPDX-License-Identifier: Apache-2.0
@@ -103,6 +132,7 @@ runs:
 
     - name: Sign artifacts
       id: sign
+      if: inputs.signing-method == 'gpg'
       shell: bash
       env:
         GPG_KEY_ID: ${{ steps.gpg.outputs.key-id }}
@@ -135,6 +165,38 @@ runs:
 
         ASC_COUNT=$(find "$M2REPO" -name "*.asc" | wc -l)
         echo "Signed artifacts: $ASC_COUNT .asc files created"
+        echo "sign-count=$ASC_COUNT" >> "$GITHUB_OUTPUT"
+
+    - name: Verify pre-signed artifacts
+      id: verify-sign
+      if: inputs.signing-method == 'sigul'
+      shell: bash
+      run: |
+        # SPDX-License-Identifier: Apache-2.0
+        set -euo pipefail
+
+        M2REPO="${{ inputs.m2repo-path }}"
+        MISSING=0
+        ASC_COUNT=0
+
+        # Every deployable artifact (same set GPG would sign) MUST have a
+        # detached signature produced by the caller (e.g. sigul-sign-action).
+        while read -r file; do
+          if [ -f "${file}.asc" ]; then
+            ASC_COUNT=$((ASC_COUNT + 1))
+          else
+            echo "::error::Missing signature for $(basename "$file") (.asc not found)"
+            MISSING=$((MISSING + 1))
+          fi
+        done < <(find "$M2REPO" -type f \
+          \( -name "*.jar" -o -name "*.pom" -o -name "*.module" \))
+
+        if [ "$MISSING" -gt 0 ]; then
+          echo "::error::signing-method 'sigul' requires pre-signed artifacts, but $MISSING signature(s) are missing"
+          exit 1
+        fi
+
+        echo "Verified $ASC_COUNT pre-signed artifact(s)"
         echo "sign-count=$ASC_COUNT" >> "$GITHUB_OUTPUT"
 
     - name: Create bundle ZIP
@@ -297,13 +359,16 @@ runs:
         # SPDX-License-Identifier: Apache-2.0
         set -euo pipefail
 
+        SIGN_COUNT="${{ steps.sign.outputs.sign-count || steps.verify-sign.outputs.sign-count || 'N/A' }}"
+
         cat >> "$GITHUB_STEP_SUMMARY" << EOF
         ## Maven Central Publication
 
         | | |
         |---|---|
         | **Artifacts** | ${{ steps.validate.outputs.artifact-count }} POM(s) |
-        | **Signatures** | ${{ steps.sign.outputs.sign-count }} .asc files |
+        | **Signing Method** | ${{ inputs.signing-method }} |
+        | **Signatures** | ${SIGN_COUNT} .asc files |
         | **Bundle Size** | $(numfmt --to=iec ${{ steps.bundle.outputs.bundle-size }} 2>/dev/null || echo "N/A") |
         | **Publishing Type** | ${{ inputs.publishing-type }} |
         | **Dry Run** | ${{ inputs.dry-run }} |
