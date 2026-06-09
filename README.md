@@ -7,7 +7,7 @@ SPDX-FileCopyrightText: 2026 The Linux Foundation
 
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable-next-line MD013 -->
-[![Linux Foundation](https://img.shields.io/badge/Linux-Foundation-blue)](https://linuxfoundation.org/) [![Source Code](https://img.shields.io/badge/GitHub-100000?logo=github&logoColor=white&color=blue)](https://github.com/askb/central-publish-action) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![pre-commit.ci status badge]][pre-commit.ci results page] [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/askb/central-publish-action/badge)](https://scorecard.dev/viewer/?uri=github.com/askb/central-publish-action)
+[![Linux Foundation](https://img.shields.io/badge/Linux-Foundation-blue)](https://linuxfoundation.org/) [![Source Code](https://img.shields.io/badge/GitHub-100000?logo=github&logoColor=white&color=blue)](https://github.com/lfreleng-actions/central-publish-action) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![pre-commit.ci status badge]][pre-commit.ci results page] [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/lfreleng-actions/central-publish-action/badge)](https://scorecard.dev/viewer/?uri=github.com/lfreleng-actions/central-publish-action)
 <!-- prettier-ignore-end -->
 
 Publish Maven artifacts to Maven Central via the [Central Portal REST API](https://central.sonatype.com/publishing).
@@ -26,7 +26,7 @@ Publish Maven artifacts to Maven Central via the [Central Portal REST API](https
 ### Basic (validation — safe for testing)
 
 ```yaml
-- uses: askb/central-publish-action@main
+- uses: lfreleng-actions/central-publish-action@main
   with:
     m2repo-path: m2repo
     central-username: ${{ secrets.CENTRAL_USERNAME }}
@@ -38,7 +38,7 @@ Publish Maven artifacts to Maven Central via the [Central Portal REST API](https
 ### Production (auto-publish)
 
 ```yaml
-- uses: askb/central-publish-action@main
+- uses: lfreleng-actions/central-publish-action@main
   with:
     m2repo-path: m2repo
     central-username: ${{ secrets.CENTRAL_USERNAME }}
@@ -50,7 +50,7 @@ Publish Maven artifacts to Maven Central via the [Central Portal REST API](https
 ### Dry run (no upload)
 
 ```yaml
-- uses: askb/central-publish-action@main
+- uses: lfreleng-actions/central-publish-action@main
   with:
     m2repo-path: m2repo
     central-username: ${{ secrets.CENTRAL_USERNAME }}
@@ -143,5 +143,5 @@ Use `publishing-type: USER_MANAGED` for safe testing:
 
 Apache-2.0
 
-[pre-commit.ci results page]: https://results.pre-commit.ci/latest/github/askb/central-publish-action/master
-[pre-commit.ci status badge]: https://results.pre-commit.ci/badge/github/askb/central-publish-action/master.svg
+[pre-commit.ci results page]: https://results.pre-commit.ci/latest/github/lfreleng-actions/central-publish-action/master
+[pre-commit.ci status badge]: https://results.pre-commit.ci/badge/github/lfreleng-actions/central-publish-action/master.svg
