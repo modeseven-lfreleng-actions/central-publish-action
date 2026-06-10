@@ -86,7 +86,7 @@ deployable artifact. The `signing-method` input controls how the action creates 
   action verifies that a `.asc` exists for every deployable artifact and
   fails if any is missing. `gpg-private-key` is not used.
 - **`none`** — no signing and no verification. Intended for `dry-run` or
-  non-Central testing; Central rejects an unsigned bundle.
+  non-Central testing; Maven Central rejects an unsigned bundle.
 
 ## Outputs
 
