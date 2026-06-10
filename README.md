@@ -61,32 +61,32 @@ Publish Maven artifacts to Maven Central via the [Central Portal REST API](https
 
 ## Inputs
 
-| Input              | Required | Default        | Description                           |
-|--------------------|----------|----------------|---------------------------------------|
-| `m2repo-path`      | yes      | `m2repo`       | Path to local Maven repo directory    |
-| `central-username` | yes      | —              | Central Portal token username         |
-| `central-token`    | yes      | —              | Central Portal token password         |
-| `signing-method`   | no       | `gpg`          | `gpg`, `sigul`, or `none` (see below) |
+| Input              | Required | Default        | Description                                                                |
+|--------------------|----------|----------------|----------------------------------------------------------------------------|
+| `m2repo-path`      | yes      | `m2repo`       | Path to local Maven repo directory                                         |
+| `central-username` | yes      | —              | Central Portal token username                                              |
+| `central-token`    | yes      | —              | Central Portal token password                                              |
+| `signing-method`   | no       | `gpg`          | `gpg`, `sigul`, or `none` (see below)                                      |
 | `gpg-private-key`  | cond.    | —              | GPG private key (base64-encoded armor); required when `signing-method=gpg` |
-| `gpg-passphrase`   | no       | _(empty)_      | GPG key passphrase                    |
-| `publishing-type`  | no       | `USER_MANAGED` | `AUTOMATIC` or `USER_MANAGED`         |
-| `dry-run`          | no       | `false`        | Skip upload, create bundle file       |
-| `poll-timeout`     | no       | `600`          | Max seconds to wait for validation    |
-| `poll-interval`    | no       | `15`           | Seconds between status polls          |
+| `gpg-passphrase`   | no       | _(empty)_      | GPG key passphrase                                                         |
+| `publishing-type`  | no       | `USER_MANAGED` | `AUTOMATIC` or `USER_MANAGED`                                              |
+| `dry-run`          | no       | `false`        | Skip upload, create bundle file                                            |
+| `poll-timeout`     | no       | `600`          | Max seconds to wait for validation                                         |
+| `poll-interval`    | no       | `15`           | Seconds between status polls                                               |
 
 ### Signing methods
 
 Maven Central requires a detached ASCII-armored `.asc` signature for every
-deployable artifact. The `signing-method` input controls how those are produced:
+deployable artifact. The `signing-method` input controls how the action creates them:
 
 - **`gpg`** (default) — the action imports `gpg-private-key` and signs every
-  `*.jar`/`*.pom`/`*.module` (files already carrying a `.asc` are left intact).
+  `*.jar`/`*.pom`/`*.module` (leaving files that already carry a `.asc` intact).
 - **`sigul`** — the caller MUST pre-sign the artifacts in a prior step (e.g.
   [`lfit/sigul-sign-action`](https://github.com/lfit/sigul-sign-action)). The
-  action only verifies that a `.asc` exists for every deployable artifact and
+  action verifies that a `.asc` exists for every deployable artifact and
   fails if any is missing. `gpg-private-key` is not used.
 - **`none`** — no signing and no verification. Intended for `dry-run` or
-  non-Central testing only; an unsigned bundle will be rejected by Central.
+  non-Central testing; Central rejects an unsigned bundle.
 
 ## Outputs
 
