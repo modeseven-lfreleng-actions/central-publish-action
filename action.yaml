@@ -375,3 +375,7 @@ runs:
         | **Deployment ID** | ${{ steps.upload.outputs.deployment_id || 'N/A (dry-run)' }} |
         | **Status** | ${{ steps.poll.outputs.deployment_status || 'N/A' }} |
         EOF
+
+branding:
+  icon: "upload-cloud"
+  color: "blue"
