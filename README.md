@@ -143,5 +143,5 @@ Use `publishing-type: USER_MANAGED` for safe testing:
 
 Apache-2.0
 
-[pre-commit.ci results page]: https://results.pre-commit.ci/latest/github/lfreleng-actions/central-publish-action/master
-[pre-commit.ci status badge]: https://results.pre-commit.ci/badge/github/lfreleng-actions/central-publish-action/master.svg
+[pre-commit.ci results page]: https://results.pre-commit.ci/latest/github/lfreleng-actions/central-publish-action/main
+[pre-commit.ci status badge]: https://results.pre-commit.ci/badge/github/lfreleng-actions/central-publish-action/main.svg
