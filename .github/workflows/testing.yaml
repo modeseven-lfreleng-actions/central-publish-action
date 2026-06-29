@@ -23,7 +23,7 @@ on:
         type: boolean
         default: false
   push:
-    branches: [master, main]
+    branches: [main]
     paths:
       - "action.yaml"
       - "scripts/**"
@@ -35,7 +35,7 @@ on:
   # checkout pinned to the PR head SHA. The workflow definition is always
   # taken from the base branch; untrusted PR code only runs after approval.
   pull_request_target:  # zizmor: ignore[dangerous-triggers]
-    branches: [master, main]
+    branches: [main]
     types: [opened, synchronize, reopened, labeled]
     paths:
       - "action.yaml"
