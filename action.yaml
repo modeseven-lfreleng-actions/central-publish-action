@@ -71,12 +71,16 @@ runs:
     - name: Validate inputs
       id: validate
       shell: bash
+      env:
+        INPUT_M2REPO: "${{ inputs.m2repo-path }}"
+        INPUT_SIGNING_METHOD: "${{ inputs.signing-method }}"
+        INPUT_GPG_KEY_PROVIDED: "${{ inputs.gpg-private-key != '' }}"
       run: |
         # SPDX-License-Identifier: Apache-2.0
         set -euo pipefail
 
-        M2REPO="${{ inputs.m2repo-path }}"
-        SIGNING_METHOD="${{ inputs.signing-method }}"
+        M2REPO="$INPUT_M2REPO"
+        SIGNING_METHOD="$INPUT_SIGNING_METHOD"
 
         case "$SIGNING_METHOD" in
           gpg|sigul|none) ;;
@@ -86,7 +90,7 @@ runs:
             ;;
         esac
 
-        if [ "$SIGNING_METHOD" = "gpg" ] && [ -z "${{ inputs.gpg-private-key }}" ]; then
+        if [ "$SIGNING_METHOD" = "gpg" ] && [ "$INPUT_GPG_KEY_PROVIDED" != "true" ]; then
           echo "::error::signing-method is 'gpg' but gpg-private-key is empty"
           exit 1
         fi
@@ -110,11 +114,13 @@ runs:
       id: gpg
       if: inputs.signing-method == 'gpg'
       shell: bash
+      env:
+        INPUT_GPG_PRIVATE_KEY: "${{ inputs.gpg-private-key }}"
       run: |
         # SPDX-License-Identifier: Apache-2.0
         set -euo pipefail
 
-        echo "${{ inputs.gpg-private-key }}" | base64 -d | \
+        printf '%s' "$INPUT_GPG_PRIVATE_KEY" | base64 -d | \
           gpg --batch --import 2>&1
 
         # Get the key ID
@@ -135,13 +141,14 @@ runs:
       if: inputs.signing-method == 'gpg'
       shell: bash
       env:
-        GPG_KEY_ID: ${{ steps.gpg.outputs.key-id }}
-        GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
+        GPG_KEY_ID: "${{ steps.gpg.outputs.key-id }}"
+        GPG_PASSPHRASE: "${{ inputs.gpg-passphrase }}"
+        INPUT_M2REPO: "${{ inputs.m2repo-path }}"
       run: |
         # SPDX-License-Identifier: Apache-2.0
         set -euo pipefail
 
-        M2REPO="${{ inputs.m2repo-path }}"
+        M2REPO="$INPUT_M2REPO"
         SIGN_COUNT=0
 
         # Sign all .jar and .pom files
@@ -171,11 +178,13 @@ runs:
       id: verify-sign
       if: inputs.signing-method == 'sigul'
       shell: bash
+      env:
+        INPUT_M2REPO: "${{ inputs.m2repo-path }}"
       run: |
         # SPDX-License-Identifier: Apache-2.0
         set -euo pipefail
 
-        M2REPO="${{ inputs.m2repo-path }}"
+        M2REPO="$INPUT_M2REPO"
         MISSING=0
         ASC_COUNT=0
 
@@ -202,11 +211,13 @@ runs:
     - name: Create bundle ZIP
       id: bundle
       shell: bash
+      env:
+        INPUT_M2REPO: "${{ inputs.m2repo-path }}"
       run: |
         # SPDX-License-Identifier: Apache-2.0
         set -euo pipefail
 
-        M2REPO="${{ inputs.m2repo-path }}"
+        M2REPO="$INPUT_M2REPO"
         BUNDLE_DIR="${GITHUB_WORKSPACE}/central-bundle"
         BUNDLE_PATH="${BUNDLE_DIR}/bundle.zip"
         mkdir -p "$BUNDLE_DIR"
@@ -239,14 +250,15 @@ runs:
       if: inputs.dry-run != 'true'
       shell: bash
       env:
-        CENTRAL_USERNAME: ${{ inputs.central-username }}
-        CENTRAL_TOKEN: ${{ inputs.central-token }}
+        CENTRAL_USERNAME: "${{ inputs.central-username }}"
+        CENTRAL_TOKEN: "${{ inputs.central-token }}"
+        INPUT_PUBLISHING_TYPE: "${{ inputs.publishing-type }}"
+        BUNDLE_PATH: "${{ steps.bundle.outputs.bundle_path }}"
       run: |
         # SPDX-License-Identifier: Apache-2.0
         set -euo pipefail
 
-        BUNDLE_PATH="${{ steps.bundle.outputs.bundle_path }}"
-        PUBLISHING_TYPE="${{ inputs.publishing-type }}"
+        PUBLISHING_TYPE="$INPUT_PUBLISHING_TYPE"
 
         # Generate Bearer token: base64(username:password)
         AUTH_TOKEN=$(echo -n "${CENTRAL_USERNAME}:${CENTRAL_TOKEN}" | base64 -w0)
@@ -273,15 +285,18 @@ runs:
       if: inputs.dry-run != 'true'
       shell: bash
       env:
-        CENTRAL_USERNAME: ${{ inputs.central-username }}
-        CENTRAL_TOKEN: ${{ inputs.central-token }}
+        CENTRAL_USERNAME: "${{ inputs.central-username }}"
+        CENTRAL_TOKEN: "${{ inputs.central-token }}"
+        INPUT_PUBLISHING_TYPE: "${{ inputs.publishing-type }}"
+        INPUT_POLL_TIMEOUT: "${{ inputs.poll-timeout }}"
+        INPUT_POLL_INTERVAL: "${{ inputs.poll-interval }}"
+        DEPLOYMENT_ID: "${{ steps.upload.outputs.deployment_id }}"
       run: |
         # SPDX-License-Identifier: Apache-2.0
         set -euo pipefail
 
-        DEPLOYMENT_ID="${{ steps.upload.outputs.deployment_id }}"
-        TIMEOUT="${{ inputs.poll-timeout }}"
-        INTERVAL="${{ inputs.poll-interval }}"
+        TIMEOUT="$INPUT_POLL_TIMEOUT"
+        INTERVAL="$INPUT_POLL_INTERVAL"
 
         AUTH_TOKEN=$(echo -n "${CENTRAL_USERNAME}:${CENTRAL_TOKEN}" | base64 -w0)
         echo "::add-mask::$AUTH_TOKEN"
@@ -320,7 +335,7 @@ runs:
               ;;
             VALIDATED)
               FINAL_STATUS="VALIDATED"
-              if [ "${{ inputs.publishing-type }}" = "USER_MANAGED" ]; then
+              if [ "$INPUT_PUBLISHING_TYPE" = "USER_MANAGED" ]; then
                 echo "✅ Deployment VALIDATED (USER_MANAGED — not auto-published)"
                 break
               fi
@@ -355,25 +370,34 @@ runs:
     - name: Generate summary
       if: always()
       shell: bash
+      env:
+        INPUT_SIGNING_METHOD: "${{ inputs.signing-method }}"
+        INPUT_PUBLISHING_TYPE: "${{ inputs.publishing-type }}"
+        INPUT_DRY_RUN: "${{ inputs.dry-run }}"
+        SIGN_COUNT: "${{ steps.sign.outputs.sign-count || steps.verify-sign.outputs.sign-count || 'N/A' }}"
+        ARTIFACT_COUNT: "${{ steps.validate.outputs.artifact-count }}"
+        BUNDLE_SIZE: "${{ steps.bundle.outputs.bundle-size }}"
+        DEPLOYMENT_ID: "${{ steps.upload.outputs.deployment_id || 'N/A (dry-run)' }}"
+        DEPLOYMENT_STATUS: "${{ steps.poll.outputs.deployment_status || 'N/A' }}"
       run: |
         # SPDX-License-Identifier: Apache-2.0
         set -euo pipefail
 
-        SIGN_COUNT="${{ steps.sign.outputs.sign-count || steps.verify-sign.outputs.sign-count || 'N/A' }}"
+        BUNDLE_SIZE_HUMAN="$(numfmt --to=iec "${BUNDLE_SIZE}" 2>/dev/null || echo 'N/A')"
 
         cat >> "$GITHUB_STEP_SUMMARY" << EOF
         ## Maven Central Publication
 
         | | |
         |---|---|
-        | **Artifacts** | ${{ steps.validate.outputs.artifact-count }} POM(s) |
-        | **Signing Method** | ${{ inputs.signing-method }} |
+        | **Artifacts** | ${ARTIFACT_COUNT} POM(s) |
+        | **Signing Method** | ${INPUT_SIGNING_METHOD} |
         | **Signatures** | ${SIGN_COUNT} .asc files |
-        | **Bundle Size** | $(numfmt --to=iec ${{ steps.bundle.outputs.bundle-size }} 2>/dev/null || echo "N/A") |
-        | **Publishing Type** | ${{ inputs.publishing-type }} |
-        | **Dry Run** | ${{ inputs.dry-run }} |
-        | **Deployment ID** | ${{ steps.upload.outputs.deployment_id || 'N/A (dry-run)' }} |
-        | **Status** | ${{ steps.poll.outputs.deployment_status || 'N/A' }} |
+        | **Bundle Size** | ${BUNDLE_SIZE_HUMAN} |
+        | **Publishing Type** | ${INPUT_PUBLISHING_TYPE} |
+        | **Dry Run** | ${INPUT_DRY_RUN} |
+        | **Deployment ID** | ${DEPLOYMENT_ID} |
+        | **Status** | ${DEPLOYMENT_STATUS} |
         EOF
 
 branding:
