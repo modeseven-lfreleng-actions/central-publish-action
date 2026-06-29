@@ -28,11 +28,43 @@ on:
       - "action.yaml"
       - "scripts/**"
       - ".github/workflows/testing.yaml"
+  # Fork PRs cannot access the Central/GPG publishing secrets, so this
+  # suite is shown but skipped on them by default. A maintainer can opt a
+  # fork PR in by applying the 'safe to test' label: the build job then
+  # runs via the 'integration' environment (required reviewers), with the
+  # checkout pinned to the PR head SHA. The workflow definition is always
+  # taken from the base branch; untrusted PR code only runs after approval.
+  pull_request_target:  # zizmor: ignore[dangerous-triggers]
+    branches: [master, main]
+    types: [opened, synchronize, reopened, labeled]
+    paths:
+      - "action.yaml"
+      - "scripts/**"
+      - ".github/workflows/testing.yaml"
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
+    # Runs on push, workflow_dispatch, and same-repo PRs automatically.
+    # Fork PRs run only when a maintainer adds the 'safe to test' label
+    # (otherwise the job is shown but skipped).
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request_target' &&
+       (github.event.pull_request.head.repo.full_name == github.repository ||
+        contains(github.event.pull_request.labels.*.name, 'safe to test')))
+    # Gate fork-PR runs behind the 'integration' environment (required
+    # reviewers). Trusted events (push, dispatch, same-repo PRs) use the
+    # unprotected 'integration-auto' environment, which has no reviewers
+    # and runs without delay.
+    # yamllint disable-line rule:line-length
+    environment: ${{ (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository) && 'integration' || 'integration-auto' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -45,6 +77,14 @@ jobs:
       - name: Checkout action
         # yamllint disable-line rule:line-length
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # For fork PRs this is the (reviewer-approved) PR head repo and
+          # SHA; for push and same-repo events it falls back to the base
+          # repository and triggering SHA.
+          # yamllint disable-line rule:line-length
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - name: Setup Java
         # yamllint disable-line rule:line-length
